@@ -9,6 +9,8 @@ services:
       - "8000:8000"
     depends_on:
       - mongo
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
   mongo:
     image: mongo:7
