@@ -11,18 +11,19 @@ def trigger_build(event_id: str):
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    repo = repos_collection.find_one({"_id": ObjectId(event["repo_id"])})
+    repo = repos_collection.find_one({"_id": event["repo_id"]})
     image_tag = f"{repo['name']}:{event['commit_sha'][:7]}"
 
     code, logs = build_image(repo["git_url"], event["commit_sha"], image_tag)
 
     build_doc = {
-        "repo_id": event["repo_id"],
+        "repo_id": str(event["repo_id"]),   
         "commit_sha": event["commit_sha"],
         "image_tag": image_tag,
         "status": "success" if code == 0 else "failed",
         "logs": logs
     }
+    
 
     result = builds_collection.insert_one(build_doc)
     
