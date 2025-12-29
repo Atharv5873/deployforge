@@ -1,6 +1,5 @@
 from fastapi import FastAPI
-from api.routers import repos
-from api.routers import webhooks
+from api.routers import repos, webhooks, builds
 
 
 
@@ -13,6 +12,7 @@ app = FastAPI(
 
 app.include_router(repos.router)
 app.include_router(webhooks.router)
+app.include_router(builds.router)
 
 @app.get("/")
 def root():

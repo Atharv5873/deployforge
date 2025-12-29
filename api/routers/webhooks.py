@@ -9,32 +9,35 @@ GITHUB_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")
 
 @router.post("/github")
 async def github_webhook(request: Request):
-    body = await request.body()
-    signature = request.headers.get("X-Hub-Signature-256")
-
-    if not verify_github_signature(GITHUB_SECRET, body, signature):
-        raise HTTPException(status_code=401, detail="Invalid webhook signature")
-
     payload = await request.json()
 
-    if payload.get("ref", "").endswith("/main") is False:
+    repo_url = payload["repository"]["html_url"].rstrip(".git")
+    branch = payload["ref"].split("/")[-1]
+    commit_sha = payload["after"]   # ✅ THIS WAS MISSING
+
+    if branch != "main":
         return {"message": "Ignored non-main branch push"}
 
-    git_url = payload["repository"]["html_url"]
-
-    repo = repos_collection.find_one({"git_url": git_url})
+    repo = repos_collection.find_one({"git_url": repo_url})
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not registered")
 
+    existing = events_collection.find_one({
+        "repo_id": repo["_id"],
+        "commit_sha": commit_sha
+    })
+
+    if existing:
+        return {"message": "Deployment event already registered"}
+
     event = {
-        "repo_id": str(repo["_id"]),
+        "repo_id": repo["_id"],
         "event_type": "push",
-        "branch": "main",
-        "commit_sha": payload["after"],
-        "payload": payload,
+        "branch": branch,
+        "commit_sha": commit_sha,
+        "payload": payload
     }
 
     events_collection.insert_one(event)
-
-    # Phase 3 will enqueue jobs here
     return {"message": "Deployment event registered"}
+    

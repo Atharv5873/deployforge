@@ -6,3 +6,4 @@ db = client[settings.MONGO_DB]
 
 repos_collection = db.repositories
 events_collection = db.deployment_events
+builds_collection = db.builds
